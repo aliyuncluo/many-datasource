@@ -1,0 +1,47 @@
+# mybatis 配置
+mybatis:
+  mapper-locations: classpath*:com/najie/exam/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    call-setters-on-nulls: true
+
+
+datasource:
+  druid:
+    type: com.alibaba.druid.pool.DruidDataSource
+    initialSize: 1
+    minIdle: 3
+    maxActive: 20
+    maxWait: 60000
+    timeBetweenEvictionRunsMillis: 60000
+    minEvictableIdleTimeMillis: 30000
+    testWhileIdle: true
+    testOnBorrow: false
+    testOnReturn: false
+    poolPreparedStatements: true
+    maxPoolPreparedStatementPerConnectionSize: 20
+    # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+    filters: stat,wall,slf4j
+    # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
+    connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+    # 合并多个DruidDataSource的监控数据
+    #useGlobalDataSourceStat: true
+  sqlserver:
+    url: jdbc:sqlserver://www.333job.com:1009;databasename=BF-201907141509
+    username: administrator
+    password: 106.14.5.0@najie
+    driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    validationQuery: select 1      
+  mysql:
+    url: jdbc:mysql://rm-uf6312l97x4lih402.mysql.rds.aliyuncs.com:3306/knowledgeServ?useUnicode=true&useSSL=false&characterEncoding=utf8
+    username: nj_admin
+    password: NaJiE_123!@#
+    driverClassName: com.mysql.jdbc.Driver
+    validationQuery: select 'x' 
+
+    
+#cron
+najie:
+  cron:
+    careerstatis: 0 0 1 * * ?    #每天凌晨1点执行     

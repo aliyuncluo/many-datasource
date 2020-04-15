@@ -1,0 +1,15 @@
+# mybatis 配置
+mybatis:
+  mapper-locations: classpath*:com/najie/exam/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    call-setters-on-nulls: true
+
+## SqlServer 配置
+spring:
+  datasource:
+    url: jdbc:sqlserver://www.333job.com:1009;databasename=BF-201907141509
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    username: administrator
+    password: 106.14.5.0@najie

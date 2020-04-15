@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.najie.exam.dao.CareerStatisMapper">
+    
+    <!-- 新增单位数 -->
+    <select id="selectIncrUnitNum" parameterType="com.najie.exam.domain.vo.StatisInfoVO" resultType="map">
+     select isnull(sum(unit),0) as unit_num
+     from (
+           select count(1) as unit from CorpInfo a where 
+           exists (select  AccountID  
+                   from CorpLogin b 
+                   where  b.State=2 
+                     <if test="type==0">
+                       and CONVERT(VARCHAR(100), b.Regdate, 23)=#{pubDate,jdbcType=VARCHAR}
+                     </if>
+                      <if test="type==1">
+                       and CONVERT(varchar(7) , b.Regdate, 120)=#{pubDate,jdbcType=VARCHAR}
+                      </if>
+                      and a.AccountID=b.ID)
+           group by a.CorpName) a
+    </select>
+    
+    <!-- 新增职位数和刷新数 -->
+    <select id="selectIncrJobNum" parameterType="com.najie.exam.domain.vo.StatisInfoVO" resultType="map">
+      select sum(RefrushCount) as refresh,
+             sum(JobCount) as job_num 
+      from (
+           select sum(isnull(c.RefrushCount,0)) as RefrushCount,count(c.JobName) as JobCount
+           from CorpInfo a 
+           inner join CorpLogin b on b.State=2 and a.AccountID=b.ID
+           inner join JobInfo c on a.ID=c.OrgID
+           where 1=1
+           <if test="type==0">
+             and CONVERT(VARCHAR(100), c.PubDate, 23)=#{pubDate,jdbcType=VARCHAR}
+           </if>
+           <if test="type==1">
+             and CONVERT(varchar(7) , c.PubDate, 120)=#{pubDate,jdbcType=VARCHAR}
+           </if>
+           group by a.CorpName) a
+    </select>
+    
+    <!-- 注册数 -->
+    <select id="selectRegisterNum" parameterType="com.najie.exam.domain.vo.StatisInfoVO" resultType="map">
+       select sum(Register) as register_num 
+       from (
+            select  count(1) as Register from ResumeInfo
+            where 1=1
+            <if test="type==0">
+             and CONVERT(VARCHAR(100), UpdateTime, 23)=#{pubDate,jdbcType=VARCHAR}
+            </if>  
+            <if test="type==1">
+             and CONVERT(varchar(7) , UpdateTime, 120)=#{pubDate,jdbcType=VARCHAR}
+            </if>
+            group by ResumeName) a
+    </select>
+    
+    
+    <!-- 总单位数 -->
+    <select id="selectTotalUnitNum" resultType="map" parameterType="com.najie.exam.domain.vo.StatisInfoVO">
+        select isnull(sum(unit),0) as total_unit_num
+        from (
+           select count(1) as unit from CorpInfo a where 
+           exists (select  AccountID  
+                   from CorpLogin b 
+                   where  b.State=2
+                      <if test="type==0">
+                       and CONVERT(VARCHAR(100), b.Regdate, 23) &lt;=#{pubDate,jdbcType=VARCHAR} 
+                      </if>  
+                      <if test="type==1">
+                       and CONVERT(varchar(7) , b.Regdate, 120) &lt;=#{pubDate,jdbcType=VARCHAR} 
+                      </if>
+                      and a.AccountID=b.ID)
+           group by a.CorpName) a
+    </select>
+    
+    <!-- 总职位数 -->
+    <select id="selectTotalJobNum" resultType="map" parameterType="com.najie.exam.domain.vo.StatisInfoVO">
+        select sum(JobCount) as total_job_num 
+        from (
+           select sum(isnull(c.RefrushCount,0)) as RefrushCount,count(c.JobName) as JobCount
+           from CorpInfo a 
+           inner join CorpLogin b on b.State=2 and a.AccountID=b.ID
+           inner join JobInfo c on a.ID=c.OrgID
+        where 1=1
+           <if test="type==0">
+            and CONVERT(VARCHAR(100), c.PubDate, 23) &lt;=#{pubDate,jdbcType=VARCHAR}
+           </if>   
+           <if test="type==1">
+            and CONVERT(varchar(7) , c.PubDate, 120) &lt;=#{pubDate,jdbcType=VARCHAR} 
+           </if>
+           group by a.CorpName) a
+    </select>
+    
+</mapper>

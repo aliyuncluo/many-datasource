@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.najie.exam.dao.CareerStatisInfoMapper">
+    
+    <insert id="saveCareerStatisInfo" parameterType="com.najie.exam.domain.entity.CareerStatisInfoPO">
+       insert into t_b_career_statis_info
+       (id,
+        incr_unit_num,
+        incr_job_num,
+        total_unit_num,
+        total_job_num,
+        refresh_num,
+        register_num,
+        public_date,
+        create_id,
+        create_name,
+        created,
+        update_id,
+        update_name,
+        updated
+        ) values (
+        #{id,jdbcType=VARCHAR},
+        #{incr_unit_num,jdbcType=INTEGER},
+        #{incr_job_num,jdbcType=INTEGER},
+        #{total_unit_num,jdbcType=INTEGER},
+        #{total_job_num,jdbcType=INTEGER},
+        #{refresh_num,jdbcType=INTEGER},
+        #{register_num,jdbcType=INTEGER},
+        #{public_date,jdbcType=DATE},
+        #{create_id,jdbcType=VARCHAR},
+        #{create_name,jdbcType=VARCHAR},
+        #{created,jdbcType=TIMESTAMP},
+        #{update_id,jdbcType=VARCHAR},
+        #{update_name,jdbcType=VARCHAR},
+        #{updated,jdbcType=TIMESTAMP}
+        )
+    </insert>
+
+</mapper>

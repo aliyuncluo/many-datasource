@@ -1,0 +1,321 @@
+package com.najie.exam.service.impl;
+
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.validation.ValidationException;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
+import com.najie.exam.config.DataSourceType;
+import com.najie.exam.config.TargetDataSource;
+import com.najie.exam.dao.CareerStatisMapper;
+import com.najie.exam.domain.PageResult;
+import com.najie.exam.domain.entity.CareerStatisInfo;
+import com.najie.exam.domain.vo.StatisInfoVO;
+import com.najie.exam.exception.ServiceException;
+import com.najie.exam.service.CareerStatisService;
+import com.najie.exam.utils.DateUtils;
+import com.najie.exam.utils.ObjectUtil;
+
+import io.micrometer.core.instrument.util.StringUtils;
+
+@Service
+public class CareerStatisServiceImpl implements CareerStatisService{
+    @Autowired
+	CareerStatisMapper testMapper;
+	
+	/**
+	 * @desc 按年统计
+	 * @param year
+	 * @return
+	 */
+    //@TargetDataSource(DataSourceType.Sqlserver)
+	public List<CareerStatisInfo> getYearStatics(String year){
+		List<CareerStatisInfo> list = new ArrayList<>();
+		String regex_year="[0-9]{4}";
+		if(!year.matches(regex_year)) {
+			throw new ServiceException("传入的日期格式有误");
+		}
+		List<String> yearList = new ArrayList<>();
+		for(int i=0;i<12;i++) {
+			if(i+1<10) {
+				yearList.add(year+"-0"+(i+1));
+			}else {
+				yearList.add(year+"-"+(i+1));
+			}
+		}
+		for(String pubMonth:yearList) {
+			CareerStatisInfo careerStatisInfo = getStaticsByDay(pubMonth);
+			String[] split = pubMonth.split("-");
+			String month = split[1];
+			if("01".equals(month)) {
+				careerStatisInfo.setWeekDate("一月");
+			}else if("02".equals(month)) {
+				careerStatisInfo.setWeekDate("二月");
+			}else if("03".equals(month)) {
+				careerStatisInfo.setWeekDate("三月");
+			}else if("04".equals(month)) {
+				careerStatisInfo.setWeekDate("四月");
+			}else if("05".equals(month)) {
+				careerStatisInfo.setWeekDate("五月");
+			}else if("06".equals(month)) {
+				careerStatisInfo.setWeekDate("六月");
+			}else if("07".equals(month)) {
+				careerStatisInfo.setWeekDate("七月");
+			}else if("08".equals(month)) {
+				careerStatisInfo.setWeekDate("八月");
+			}else if("09".equals(month)) {
+				careerStatisInfo.setWeekDate("九月");
+			}else if("10".equals(month)) {
+				careerStatisInfo.setWeekDate("十月");
+			}else if("11".equals(month)) {
+				careerStatisInfo.setWeekDate("十一月");
+			}else if("12".equals(month)) {
+				careerStatisInfo.setWeekDate("十二月");
+			}
+			list.add(careerStatisInfo);
+		}
+		return list;
+	}
+	
+	/**
+	 * @desc 按月统计查询
+	 */
+	public List<CareerStatisInfo> getMonthStatis(String pubMonth){
+		List<CareerStatisInfo> resultList = new ArrayList<>();
+		String regex_month="[0-9]{4}-[0-9]{2}";
+		if(!pubMonth.matches(regex_month)) {
+			throw new ValidationException("传入的日期格式有误");
+		}
+		try {
+			Date date = DateUtils.getDate(pubMonth, "yyyy-MM");
+			int days = DateUtils.getDaysOfMonth(date);
+			List<String> firstWeekList = new ArrayList<>();
+			List<String> secondWeekList = new ArrayList<>();
+			List<String> thirdWeekList = new ArrayList<>();
+			for(int i=0;i<7;i++) {
+				firstWeekList.add(pubMonth+"-0"+(i+1));
+				if(i+8<10) {
+					secondWeekList.add(pubMonth+"-0"+(i+8));
+				}else {
+					secondWeekList.add(pubMonth+"-"+(i+8));
+				}
+				thirdWeekList.add(pubMonth+"-"+(i+15));	
+			}
+			List<String> fourWeekList = new ArrayList<>();
+			for(int i=22;i<=days;i++) {
+				fourWeekList.add(pubMonth+"-"+(i));
+			}
+			CareerStatisInfo statisInfo1 = getWeekStatisData(firstWeekList,"第一周");
+			CareerStatisInfo statisInfo2 = getWeekStatisData(secondWeekList,"第二周");
+			CareerStatisInfo statisInfo3 = getWeekStatisData(thirdWeekList,"第三周");
+			CareerStatisInfo statisInfo4 = getWeekStatisData(fourWeekList,"第四周");
+			resultList.add(statisInfo1);
+			resultList.add(statisInfo2);
+			resultList.add(statisInfo3);
+			resultList.add(statisInfo4);
+		} catch (ParseException e) {
+			throw new ServiceException("按月查询统计信息失败");
+		}
+	   	return resultList;
+	}
+	
+	/**
+	 * @desc 按每周查询统计信息
+	 * @param weekList
+	 * @param weekName
+	 * @return
+	 */
+	private CareerStatisInfo getWeekStatisData(List<String> weekList,String weekName) {
+		List<CareerStatisInfo> list = getCareerInfoList(weekList);
+		Integer incrCustNum=0;
+		Integer incrJobNum=0;
+		Integer refreshTotal=0;
+		Integer registerNum=0;
+		Integer totalCustNum=0;
+		Integer totalJobNum=0;
+		for(CareerStatisInfo statisInfo:list) {
+			incrCustNum += statisInfo.getIncrCustNum();
+			incrJobNum += statisInfo.getIncrJobNum();
+			refreshTotal += statisInfo.getRefreshTotal();
+			registerNum += statisInfo.getRegisterNum();
+			totalCustNum += statisInfo.getTotalCustNum();
+			totalJobNum += statisInfo.getTotalJobNum();
+		}
+		CareerStatisInfo careerStatisInfo = new CareerStatisInfo();
+		careerStatisInfo.setIncrCustNum(incrCustNum);
+		careerStatisInfo.setIncrJobNum(incrJobNum);
+		careerStatisInfo.setRefreshTotal(refreshTotal);
+		careerStatisInfo.setRegisterNum(registerNum);
+		careerStatisInfo.setTotalCustNum(totalCustNum);
+		careerStatisInfo.setTotalJobNum(totalJobNum);
+		careerStatisInfo.setWeekDate(weekName);
+		return careerStatisInfo;
+	}
+	
+
+	/**
+	 * @desc 获取周统计信息
+	 */
+	@Transactional
+	@TargetDataSource(DataSourceType.Sqlserver)
+	public CareerStatisInfo getWeekStatis(String pubDate){
+		CareerStatisInfo careerStatisInfo = new CareerStatisInfo();
+		try {
+			//String[] weekDateArr = DateUtils.getWeekDateArr(0,pubDate);
+			careerStatisInfo = getStaticsByDay(pubDate);
+		} catch (Exception e) {
+			throw new ServiceException("查询日统计信息失败");
+		}
+		return careerStatisInfo;
+	}
+	
+	/**
+	 * @desc 查询统计信息
+	 * @param weekDateList
+	 * @return
+	 */
+	private List<CareerStatisInfo> getCareerInfoList(List<String> weekDateList){
+		if(CollectionUtils.isEmpty(weekDateList)) {
+			return null;
+		}
+		List<CareerStatisInfo> list = new ArrayList<>();
+		try {
+			for(String weekDate:weekDateList) {
+				CareerStatisInfo careerStatisInfo = getStaticsByDay(weekDate);
+				if(careerStatisInfo==null ||ObjectUtil.entityISEmpty(careerStatisInfo)) {
+					continue;
+				}
+				list.add(careerStatisInfo);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
+	/**
+	 * @desc 按天统计信息
+	 * @param pubDate
+	 * @return
+	 */
+	private CareerStatisInfo getStaticsByDay(String pubDate) {
+		CareerStatisInfo careerStatisInfo = new CareerStatisInfo();
+		String regex_day = "[0-9]{4}-[0-9]{2}-[0-9]{2}";
+		String regex_month="[0-9]{4}-[0-9]{2}";
+		Integer type = null;
+		if(pubDate.matches(regex_day)) {
+			type=0; //代表天
+		}else if(pubDate.matches(regex_month)) {
+			type=1; //代表月
+		}
+		StatisInfoVO statisVO = new StatisInfoVO();
+		statisVO.setPubDate(pubDate);
+		statisVO.setType(type);
+		try {
+			//新增工作数
+			Map<String, Object> incrJobNumMap = testMapper.selectIncrJobNum(statisVO);
+			int jobNum=0;
+			int refresh=0;
+			if(incrJobNumMap!=null &&incrJobNumMap.size()>0) {
+				jobNum = Integer.parseInt(String.valueOf(incrJobNumMap.get("job_num")));
+				//刷新数
+				refresh = Integer.parseInt(String.valueOf(incrJobNumMap.get("refresh")));
+			}
+			
+			//新增单位数
+			Map<String, Object> incrUnitNumMap = testMapper.selectIncrUnitNum(statisVO);
+			int unitNum=0;
+			if(incrUnitNumMap!=null && incrUnitNumMap.size()>0) {
+			 unitNum = Integer.parseInt(String.valueOf(incrUnitNumMap.get("unit_num")));
+			}
+			//注册数
+			Map<String, Object> registerNumMap = testMapper.selectRegisterNum(statisVO);
+			int registerNum=0;
+			if(registerNumMap!=null && registerNumMap.size()>0) {
+				registerNum = Integer.parseInt(String.valueOf(registerNumMap.get("register_num")));
+			}
+			//总职位数
+			Map<String, Object> totalJobNumMap = testMapper.selectTotalJobNum(statisVO);
+			int totalJobNum=0;
+			if(totalJobNumMap!=null && totalJobNumMap.size()>0) {
+				totalJobNum = Integer.parseInt(String.valueOf(totalJobNumMap.get("total_job_num")));	
+			}
+			
+			//总单位数
+			Map<String, Object> totalUnitNumMap = testMapper.selectTotalUnitNum(statisVO);
+			int totalUnitNum=0;
+			if(totalUnitNumMap!=null && totalUnitNumMap.size()>0) {
+				totalUnitNum = Integer.parseInt(String.valueOf(totalUnitNumMap.get("total_unit_num")));
+			}
+			String weekDate=null;
+			if(type==0) {
+				weekDate = DateUtils.getWeekDate(DateUtils.getDate(pubDate, "yyyy-MM-dd"));
+			}
+			if(type==1) {
+				weekDate = DateUtils.getWeekDate(DateUtils.getDate(pubDate, "yyyy-MM"));
+			}
+			careerStatisInfo.setWeekDate(weekDate);
+			careerStatisInfo.setIncrCustNum(unitNum);
+			careerStatisInfo.setIncrJobNum(jobNum);
+			careerStatisInfo.setRefreshTotal(refresh);
+			careerStatisInfo.setRegisterNum(registerNum);
+			careerStatisInfo.setTotalCustNum(totalUnitNum);
+			careerStatisInfo.setTotalJobNum(totalJobNum);
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return careerStatisInfo;
+	}
+
+	/**
+	 * @desc 获取客户，职位，刷新次数统计
+	 * @param list
+	 * @return
+	 */
+	private Map<String,Integer> getStatisNum(List<Map<String,Object>> list){
+		Map<String,Integer> map = new HashMap<>();
+		 //刷新总次数
+		int refreshTotal=0;
+		//客户集合
+		Set<String> custSet = new HashSet<>();
+		//职位集合
+		Set<String> jobSet = new HashSet<>();
+		for(Map<String,Object> currMap:list) {
+			//客户名称
+			String custName=String.valueOf(currMap.get("cust_name"));
+			//刷新次数
+			String refreshCount = String.valueOf(currMap.get("refresh_count"));
+			if(StringUtils.isEmpty(refreshCount)) {
+				refreshCount="0";
+			}
+			//职位名称
+			String jobName = String.valueOf(currMap.get("job_name"));
+			custSet.add(custName);
+			jobSet.add(jobName);
+			refreshTotal+=Integer.parseInt(refreshCount);
+		}
+		//当日客户的数量
+		int custNum = custSet.size();
+		//当日职位的数量
+		int jobNum = jobSet.size();
+		map.put("refreshTotal", refreshTotal);
+		map.put("custNum", custNum);
+		map.put("jobNum", jobNum);
+		return map;
+		
+	}
+}
